@@ -12,12 +12,13 @@ function Wave()
 
 	this.canvas = null;
 
-	this.canvasWidth = 640;
-	this.canvasHeight = 640;
+	this.width = 50;
+	this.height = 50;
 
-	this.width = 25;
-	this.height = 25;
-	this.gridSize = this.canvasWidth / this.width;
+	this.canvasWidth = 600;
+	this.canvasHeight = 600;
+
+	this.elementSize = Math.floor(this.canvasWidth / this.width);
 	this.grid = null;
 
 	this.start = {
@@ -28,7 +29,6 @@ function Wave()
 		x: this.width - 3,
 		y: this.height - 3
 	};
-	this.path = [];
 
 	this.init = function(selector)
 	{
@@ -40,19 +40,18 @@ function Wave()
 
 		//this.canvas.strokeStyle = "black";
 		//this.canvas.fillStyle = "black";
-		this.canvas.lineWidth = 0.5;
+		this.canvas.lineWidth = 1;
 		this.canvas.lineCap = "round";
 	};
 
-	this.draw = function()
+	this.draw = function(finish)
 	{
 		this.canvas.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
 
-		this.createGrid();
-
+		this.clearGrid();
 		this.drawGrid();
 
-		this.go(this.start.x, this.start.y, 1);
+		finish && this.go(finish);
 	};
 
 	this.createGrid = function()
@@ -65,7 +64,7 @@ function Wave()
 			{
 				var rand = Math.round(Math.random() * 100);
 				var val = 0;
-				if (rand > 70)
+				if (rand > 75)
 					val = -1;
 				row[j] = val;
 			}
@@ -94,9 +93,22 @@ function Wave()
 		this.grid[this.start.x][this.start.y] = 0;
 	};
 
+	this.clearGrid = function()
+	{
+		for (var i = 0; i < this.grid.length; i++)
+		{
+			var row = this.grid[i];
+			for (var j = 0; j < row.length; j++)
+			{
+				if (row[j] > 0)
+					row[j] = 0;
+			}
+		}
+	};
+
 	this.drawGrid = function()
 	{
-		var size = this.gridSize;
+		var size = this.elementSize;
 
 		for (var i = 0; i < this.grid.length; i++)
 		{
@@ -118,7 +130,7 @@ function Wave()
 
 	this.drawCell = function(i, j, color)
 	{
-		var size = this.gridSize;
+		var size = this.elementSize;
 
 		if (color)
 		{
@@ -138,62 +150,73 @@ function Wave()
 
 	this.stop = false;
 
-	this.go = function()
+	this.d = [
+		{x: 0, y: -1},
+		{x: +1, y: 0},
+		{x: 0, y: +1},
+		{x: -1, y: 0}
+	];
+
+	this.go = function(finish)
 	{
+		if (!finish) return;
+		if (finish.x >= this.width || finish.y >= this.height) return;
+
 		var wave = [];
 		var oldWave = [
 			{x: this.start.x, y: this.start.y}
 		];
 		var step = 1;
 		this.grid[this.start.x][this.start.y] = 1;
-		var d = [
-			{x: 0, y: -1},
-			{x: +1, y: 0},
-			{x: 0, y: +1},
-			{x: -1, y: 0}
-		];
 
 		var finded = false;
-		drawPath:
-		// draw wave
+		calcPath:
+		// calc wave
 		while (!finded && oldWave.length > 0)
 		{
 			wave = [];
 			step++;
 			for (var i = 0; i < oldWave.length; i++)
 			{
-				for (var dd = 0; dd < d.length; dd++)
+				for (var dd = 0; dd < this.d.length; dd++)
 				{
-					var newX = oldWave[i].x + d[dd].x;
-					var newY = oldWave[i].y + d[dd].y;
+					var newX = oldWave[i].x + this.d[dd].x;
+					var newY = oldWave[i].y + this.d[dd].y;
 					if (this.grid[newX][newY] == 0)
 					{
 						wave.push({x: newX, y: newY});
 						this.grid[newX][newY] = step;
-						this.drawCell(newX, newY, "blue");
-						if (newX == this.finish.x && newY == this.finish.y)
+						//this.drawCell(newX, newY, "blue");
+						if (newX == finish.x && newY == finish.y)
 						{
 							finded = true;
-							break drawPath;
+							break calcPath;
 						}
 					}
 				}
 			}
 			oldWave = wave;
 		}
-		// comment
-		var x = this.finish.x;
-		var y = this.finish.y;
-		wave = [
+
+		this.drawPath(finish);
+	};
+
+	this.drawPath = function(finish)
+	{
+		var x = finish.x;
+		var y = finish.y;
+		var wave = [
 			{x: x, y: y}
 		];
+
+		this.drawCell(x, y, "red");
 		// draw path
 		while (this.grid[x][y] != -1 && this.grid[x][y] != 0 && this.grid[x][y] != 1)
 		{
-			for (var dd = 0; dd < d.length; dd++)
+			for (var dd = 0; dd < this.d.length; dd++)
 			{
-				var newX = x + d[dd].x;
-				var newY = y + d[dd].y;
+				var newX = x + this.d[dd].x;
+				var newY = y + this.d[dd].y;
 				if (this.grid[x][y] - 1 == this.grid[newX][newY])
 				{
 					x = newX;
@@ -204,7 +227,6 @@ function Wave()
 				}
 			}
 		}
-		this.path = wave;
 	};
 }
 
@@ -213,7 +235,19 @@ var wave = new Wave();
 $(document).ready(function(){
 	wave.init("#canvas");
 
-	$("#go").click(function(){
-		wave.draw();
+	wave.createGrid();
+
+	wave.draw();
+
+	$("#canvas").mousemove(function(event){
+		var position = $("#canvas").position();
+
+		var finish = {
+			x: Math.floor((event.layerX - position.left) / wave.elementSize),
+			y: Math.floor((event.layerY - position.top) / wave.elementSize)
+		};
+		// window.console.log(finish);
+
+		wave.draw(finish);
 	});
 });
