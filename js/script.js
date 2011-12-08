@@ -17,8 +17,8 @@ $(document).ready(function(){
 		var position = $("#canvas").position();
 
 		var finish = {
-			x: Math.floor((event.originalEvent.layerX - position.left) / wave.elementSize),
-			y: Math.floor((event.originalEvent.layerY - position.top) / wave.elementSize)
+			x: Math.floor((event.clientX - position.left) / wave.elementSize),
+			y: Math.floor((event.clientY - position.top) / wave.elementSize)
 		};
 
 		wave.draw(finish);
